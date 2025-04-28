@@ -55,15 +55,4 @@ class Api::V1::PurchasesController < ApplicationController
     end
   end
 
-  def download
-    @purchase = current_user.purchases.find_by(id: params[:id])
-
-    if @purchase
-      # In a real app, you would handle file download logic here
-      # For now, just redirect to the file URL
-      redirect_to @purchase.asset.file_url
-    else
-      redirect_to purchases_path, alert: "You do not own this asset."
-    end
-  end
 end
