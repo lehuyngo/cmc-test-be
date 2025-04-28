@@ -1,5 +1,5 @@
 class Api::V1::AuthenticationController < ApplicationController
-  skip_before_action :verify_authenticity_token, only: [:login, :register]
+  skip_before_action :authenticate_request, only: [:register, :login]
 
   def login
     @user = User.find_by(email: params[:email])
@@ -32,6 +32,6 @@ class Api::V1::AuthenticationController < ApplicationController
   private
 
   def register_params
-    params.permit(:name, :email, :password, :role)
+    params.require(:authentication).permit(:name, :email, :password, :password_confirmation, :role)
   end
 end
