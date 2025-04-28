@@ -1,15 +1,30 @@
 class Api::V1::AssetsController < ApplicationController
   before_action :authenticate_request
-  before_action :authenticate_creator! , only: [:create, :bulk_import]
+  before_action :authenticate_creator!, only: [:create, :bulk_import]
   skip_before_action :verify_authenticity_token
 
   def index
-    # Get appropriate assets based on role
+    # Extract pagination parameters
+    page = params[:page].present? ? params[:page].to_i : 1
+    limit = params[:limit].present? ? params[:limit].to_i : 10
+    
+    # Ensure valid values
+    page = 1 if page < 1
+    limit = 10 if limit < 1 || limit > 100  # Setting a max limit of 100
+    
+    # Calculate offset
+    offset = (page - 1) * limit
+
+    # Get appropriate assets based on role with pagination
     if @current_user&.role == 'creator'
-      assets = Asset.where(creator_id: @current_user.id)
+      assets_query = Asset.where(creator_id: @current_user.id)
     else 
-      assets = Asset.all
+      assets_query = Asset.all
     end
+    
+    # Apply pagination
+    total_count = assets_query.count
+    assets = assets_query.offset(offset).limit(limit)
 
     # Prepare the response data
     asset_data = assets.map do |asset|
@@ -33,8 +48,16 @@ class Api::V1::AssetsController < ApplicationController
       asset_json
     end
 
-    # Return the response data
-    render json: asset_data
+    # Return the response data with pagination metadata
+    render json: {
+      assets: asset_data,
+      meta: {
+        current_page: page,
+        per_page: limit,
+        total_count: total_count,
+        total_pages: (total_count.to_f / limit).ceil
+      }
+    }
   end
 
   def create
@@ -76,7 +99,7 @@ class Api::V1::AssetsController < ApplicationController
           next
         end
         
-        # Build asset object - Fixed syntax here
+        # Build asset object
         asset = Asset.new(
           title: asset_data["title"],
           description: asset_data["description"],
